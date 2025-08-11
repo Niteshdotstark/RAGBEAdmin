@@ -15,7 +15,8 @@ services:
 
   backend:
     build:
-      context: ./backend
+      # Change the context to the current directory
+      context: .
       dockerfile: Dockerfile
     container_name: fastapi-backend
     environment:
