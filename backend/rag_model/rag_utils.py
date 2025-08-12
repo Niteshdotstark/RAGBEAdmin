@@ -33,6 +33,8 @@ import re
 import time
 from collections import deque
 import tldextract
+import tempfile
+import shutil
 
 
 # Configuration
@@ -210,15 +212,21 @@ def recursive_crawl_with_selenium(start_urls: list, tenant_id: int, max_depth: i
 
     base_domain = urlparse(start_urls[0]).netloc
     
-    options = webdriver.ChromeOptions()
-    options.add_argument('--headless')
-    options.add_argument('--log-level=3')
-    options.page_load_strategy = 'eager'
-    
+    # Create a unique temporary directory for each run
+    temp_dir = None
     try:
+        temp_dir = tempfile.mkdtemp()
+        options = webdriver.ChromeOptions()
+        options.add_argument('--headless')
+        options.add_argument('--log-level=3')
+        options.add_argument(f'--user-data-dir={temp_dir}') # Use a unique user data directory
+        options.page_load_strategy = 'eager'
+        
         driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
     except Exception as e:
         print(f"Failed to initialize WebDriver: {e}")
+        if temp_dir:
+            shutil.rmtree(temp_dir)
         return []
 
     try:
@@ -262,7 +270,10 @@ def recursive_crawl_with_selenium(start_urls: list, tenant_id: int, max_depth: i
                 print(f"Error crawling {current_url}: {e}")
 
     finally:
-        driver.quit()
+        if 'driver' in locals():
+            driver.quit()
+        if temp_dir:
+            shutil.rmtree(temp_dir)
         
     return documents
 
