@@ -212,12 +212,21 @@ def recursive_crawl_with_selenium(start_urls: list, tenant_id: int, max_depth: i
     driver = None
 
     try:
-        temp_user_dir = tempfile.mkdtemp(prefix='selenium_session_')
+        # Create a unique temporary directory with tenant ID and UUID
+        unique_id = f"{tenant_id}_{uuid.uuid4().hex}_{int(time.time())}"
+        temp_user_dir = tempfile.mkdtemp(prefix=f'selenium_{unique_id}_')
         print(f"Created temporary user data directory: {temp_user_dir}")
 
-        options = webdriver.ChromeOptions()
+        # Ensure the directory is clean
+        if os.path.exists(temp_user_dir):
+            shutil.rmtree(temp_user_dir, ignore_errors=True)
+            os.makedirs(temp_user_dir)
+
+        options = Options()
         options.add_argument('--headless')
         options.add_argument('--log-level=3')
+        options.add_argument('--no-sandbox')  # Add for Docker compatibility
+        options.add_argument('--disable-dev-shm-usage')  # Prevent memory issues in Docker
         options.add_argument(f'--user-data-dir={temp_user_dir}')
         options.page_load_strategy = 'eager'
         
