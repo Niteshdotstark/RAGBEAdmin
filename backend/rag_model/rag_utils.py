@@ -35,6 +35,7 @@ from collections import deque
 import tldextract
 import tempfile
 import shutil
+import uuid
 
 
 # Configuration
