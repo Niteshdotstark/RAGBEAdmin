@@ -206,30 +206,21 @@ def recursive_crawl_with_selenium(start_urls: list, tenant_id: int, max_depth: i
 
     visited_urls = set()
     documents = []
-    
-    # Queue stores tuples of (url, depth)
     queue = deque([(url, 0) for url in start_urls])
-
     base_domain = urlparse(start_urls[0]).netloc
-    
-    # Create a unique temporary directory for each run
     temp_dir = None
+    driver = None
+
     try:
         temp_dir = tempfile.mkdtemp()
         options = webdriver.ChromeOptions()
         options.add_argument('--headless')
         options.add_argument('--log-level=3')
-        options.add_argument(f'--user-data-dir={temp_dir}') # Use a unique user data directory
+        options.add_argument(f'--user-data-dir={temp_dir}')
         options.page_load_strategy = 'eager'
         
         driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-    except Exception as e:
-        print(f"Failed to initialize WebDriver: {e}")
-        if temp_dir:
-            shutil.rmtree(temp_dir)
-        return []
 
-    try:
         while queue:
             current_url, current_depth = queue.popleft()
             
@@ -243,11 +234,9 @@ def recursive_crawl_with_selenium(start_urls: list, tenant_id: int, max_depth: i
                 driver.get(current_url)
                 WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.TAG_NAME, 'body')))
                 
-                # Get the page source and process with BeautifulSoup
                 page_source = driver.page_source
                 soup = BeautifulSoup(page_source, 'html.parser')
                 
-                # Clean up and extract text
                 for script_or_style in soup(['script', 'style', 'header', 'nav', 'footer']):
                     script_or_style.decompose()
                 
@@ -255,7 +244,6 @@ def recursive_crawl_with_selenium(start_urls: list, tenant_id: int, max_depth: i
                 
                 documents.append(Document(page_content=text, metadata={"tenant_id": tenant_id, "source": current_url}))
 
-                # Find all links and add to the queue for next depth level
                 if current_depth < max_depth:
                     for link in soup.find_all('a', href=True):
                         href = link['href']
@@ -264,19 +252,21 @@ def recursive_crawl_with_selenium(start_urls: list, tenant_id: int, max_depth: i
 
                         if parsed_url.netloc == base_domain and absolute_url not in visited_urls and is_valid_url(absolute_url):
                             queue.append((absolute_url, current_depth + 1))
-                            visited_urls.add(absolute_url) # Add to visited to prevent duplicates in queue
+                            visited_urls.add(absolute_url)
             
             except Exception as e:
                 print(f"Error crawling {current_url}: {e}")
 
+    except Exception as e:
+        print(f"Failed to initialize WebDriver or other critical error: {e}")
     finally:
-        if 'driver' in locals():
+        if driver:
             driver.quit()
         if temp_dir:
             shutil.rmtree(temp_dir)
-        
+            
     return documents
-
+    
 def is_valid_url(url: str) -> bool:
     try:
         parsed = urlparse(url)
