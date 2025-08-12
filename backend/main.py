@@ -28,7 +28,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000","http://ec2-65-2-142-83.ap-south-1.compute.amazonaws.com//","https://65.2.142.83/","http://65.2.142.83/"],
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000","http://ec2-13-200-19-239.ap-south-1.compute.amazonaws.com/","http://13.200.19.239/","http://65.2.142.83/"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
