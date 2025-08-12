@@ -208,14 +208,17 @@ def recursive_crawl_with_selenium(start_urls: list, tenant_id: int, max_depth: i
     documents = []
     queue = deque([(url, 0) for url in start_urls])
     base_domain = urlparse(start_urls[0]).netloc
-    temp_dir = None
+    temp_user_dir = None
     driver = None
 
     try:
-        temp_dir = tempfile.mkdtemp()
+        temp_user_dir = tempfile.mkdtemp(prefix='selenium_session_')
+        print(f"Created temporary user data directory: {temp_user_dir}")
+
         options = webdriver.ChromeOptions()
         options.add_argument('--headless')
         options.add_argument('--log-level=3')
+        options.add_argument(f'--user-data-dir={temp_user_dir}')
         options.page_load_strategy = 'eager'
         
         driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
@@ -261,8 +264,9 @@ def recursive_crawl_with_selenium(start_urls: list, tenant_id: int, max_depth: i
     finally:
         if driver:
             driver.quit()
-        if temp_dir:
-            shutil.rmtree(temp_dir)
+        if temp_user_dir:
+            shutil.rmtree(temp_user_dir, ignore_errors=True)  # Delete the temp dir after session
+            print(f"Deleted temporary user data directory: {temp_user_dir}")
             
     return documents
 
