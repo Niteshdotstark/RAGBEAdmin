@@ -216,7 +216,6 @@ def recursive_crawl_with_selenium(start_urls: list, tenant_id: int, max_depth: i
         options = webdriver.ChromeOptions()
         options.add_argument('--headless')
         options.add_argument('--log-level=3')
-        options.add_argument(f'--user-data-dir={temp_dir}')
         options.page_load_strategy = 'eager'
         
         driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
@@ -266,7 +265,7 @@ def recursive_crawl_with_selenium(start_urls: list, tenant_id: int, max_depth: i
             shutil.rmtree(temp_dir)
             
     return documents
-    
+
 def is_valid_url(url: str) -> bool:
     try:
         parsed = urlparse(url)
