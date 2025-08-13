@@ -3,13 +3,12 @@ FROM python:3.11-slim
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies for Chrome, ChromeDriver, and existing requirements (e.g., psycopg2, cryptography)
+# Install system dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
     python3-dev \
-    # Dependencies for Chrome/ChromeDriver, including gnupg for apt-key
     wget \
     unzip \
     gnupg \
@@ -27,9 +26,9 @@ RUN apt-get update && \
     xvfb \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Google Chrome
-RUN wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - && \
-    echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list && \
+# Install Google Chrome using the new method for adding GPG keys
+RUN wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | gpg --dearmor > /usr/share/keyrings/google-chrome.gpg && \
+    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome.gpg] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list && \
     apt-get update && \
     apt-get install -y --no-install-recommends google-chrome-stable && \
     rm -rf /var/lib/apt/lists/*
@@ -50,5 +49,5 @@ RUN mkdir -p /app/uploads && chmod -R 777 /app/uploads
 # Expose port
 EXPOSE 8000
 
-# Run with uvicorn (for production, use gunicorn + uvicorn workers)
+# Run with uvicorn
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
