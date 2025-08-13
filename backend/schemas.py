@@ -78,3 +78,6 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     response: str
+
+class TenantValuesUpdate(BaseModel):
+    tenant_id: int

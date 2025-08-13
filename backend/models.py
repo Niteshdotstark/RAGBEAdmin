@@ -44,3 +44,8 @@ class KnowledgeBaseFile(Base):
     uploaded_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     tenant = relationship("Tenant", back_populates="files")
+
+class TenantValues(Base):
+    __tablename__ = "tenant_values"
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, nullable=False, default=1)

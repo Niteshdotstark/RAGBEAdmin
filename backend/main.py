@@ -4,11 +4,11 @@ import httpx
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from database import get_db, engine, Base
-from models import User, Tenant, KnowledgeBaseFile
+from models import User, Tenant, KnowledgeBaseFile, TenantValues
 from rag_model.rag_utils import index_tenant_files
 from schemas import (
     UserCreate, UserResponse, TenantCreate, TenantBase,TenantUpdate,
-    KnowledgeBaseFileResponse, DatabaseCreate, DatabaseResponse, TokenResponse, ChatRequest, ChatResponse
+    KnowledgeBaseFileResponse, DatabaseCreate, DatabaseResponse, TokenResponse, ChatRequest, ChatResponse, TenantValuesUpdate
 )
 from passlib.context import CryptContext
 from jose import JWTError, jwt
@@ -42,8 +42,12 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 VERIFY_TOKEN = "chatbottoken@3420"
 FACEBOOK_ACCESS_TOKEN = "EAAKgyth24vEBPCOP16Fw4cnnGW0t9N6qoeSCtp5VlWMzSXlnsZCEUM5YWtFzQqCq2BZChkF3FKD6tszoybJ21KbpDecvga0Xr0WGlXMChSICVB9KDfHFmnT0rrUVs3DkOJlKtk5OZCq55zkls1FfSpJ0vRnnHGVAln5Y1bRqnNX3u5ZCqISAeil3X4Yc6N2XnmuJAwZDZD"  # Replace with your actual access token
-TENANT_ID = 1
+# TENANT_ID = 1
 INSTAGRAM_ACCESS_TOKEN = "IGAAbUoqM5z9pBZAE14ejFwTHkwQ2Vjb3JzSkZAuRG5BUkVZAdTkyTENnQ3RiSVFwTFZArNjhpNjNwNDhZAT1JlVjJ5VlE0UXlZAbFZAZAYkMyMDYxdmM0RGdHYTkxZATVqZADJPOXp4d2U2VU4ydHpydTdScm1ONDZA6eUxselItMWV1MjdLNAZDZD"
+
+TENANT_VALUES_DB = {
+    "tenant_id": 1,
+}
 
 # Directory to store uploaded files
 UPLOAD_DIR = "./uploads/knowledge_base"
@@ -84,6 +88,12 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
+# Dependency to get tenant values from the database
+def get_tenant_values(db: Session = Depends(get_db)):
+    tenant_values = db.query(TenantValues).first()
+    if not tenant_values:
+        raise HTTPException(status_code=500, detail="Tenant values not configured.")
+    return tenant_values
 # Endpoint to create a user (No auth)
 # Endpoint to create a user (No auth) - MODIFIED
 @app.post("/users/", response_model=UserResponse, status_code=status.HTTP_201_CREATED) # Added status_code
@@ -353,6 +363,23 @@ async def list_knowledge_base_items(
 # Placeholder for the RAG endpoint
 # Replace this entire function in your FastAPI app with the corrected version below
 
+
+@app.put("/tenant_values/", status_code=status.HTTP_200_OK)
+async def update_tenant_values(tenant_values: TenantValuesUpdate, db: Session = Depends(get_db)):
+    """
+    Allows an admin to update the single row of tenant-related values.
+    Since there is only one row, the update is global.
+    """
+    db_values = db.query(TenantValues).first()
+    if not db_values:
+        db_values = TenantValues(**tenant_values.dict())
+        db.add(db_values)
+    else:
+        db_values.tenant_id = tenant_values.tenant_id
+    db.commit()
+    db.refresh(db_values)
+    return db_values
+
 @app.post("/tenants/{tenant_id}/chat", response_model=ChatResponse)
 async def chat_with_tenant_kb(
     tenant_id: int,
@@ -384,7 +411,6 @@ async def ask_chatbot(
     # api_key: str = Depends(get_api_key),
     db: Session = Depends(get_db)
 ):
-    # Process the chatbot request
     response = answer_question_modern(request.message, tenant_id,1)
     return {"response": response["answer"], "sources": response["sources"]}
 
@@ -417,11 +443,13 @@ async def verify_webhook(request: Request):
 
 # Webhook handler for Facebook and Instagram messages
 @app.post("/webhook")
-async def handle_webhook(request: Request):
+async def handle_webhook(request: Request, db: Session = Depends(get_db), tenant_values: TenantValues = Depends(get_tenant_values)):
     try:
         data = await request.json()
         print(f"Received payload: {data}")
-        
+
+        TENANT_ID = tenant_values.tenant_id
+
         for entry in data.get("entry", []):
             if data.get("object") == "instagram":
                 # Handle Instagram direct messages
