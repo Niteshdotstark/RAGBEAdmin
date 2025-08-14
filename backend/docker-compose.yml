@@ -10,8 +10,18 @@ services:
     volumes:
       # This maps the local nginx.conf file to the container's configuration.
       - ./nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./letsencrypt:/etc/letsencrypt:ro  # New: Mount certificates (read-only)
+      - ./certbot/www:/var/www/certbot     # New: Mount webroot for ACME challenges
     depends_on:
       - backend
+  certbot:
+    image: certbot/certbot
+    container_name: certbot
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    # The entrypoint automatically renews certificates and reloads Nginx.
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $!; done;'"
 
   backend:
     build:
