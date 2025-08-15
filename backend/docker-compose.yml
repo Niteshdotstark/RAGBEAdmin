@@ -31,10 +31,10 @@ services:
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
       - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-ap-south-1}
       - HF_API_TOKEN=${HF_API_TOKEN}
-      - CHROMA_DIR=/app/chroma_db
+      - CHROMA_DIR=/chroma
     volumes:
       - ./uploads:/app/uploads
-      - chroma_data:/app/chroma_db
+      - chroma_data:/chroma
     depends_on:
       - postgres_db
       - chroma_db
