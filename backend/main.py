@@ -132,6 +132,11 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+    tenant = db.query(Tenant).filter(Tenant.creator_id == user.id).first()
+    tenant_id = tenant.id if tenant else None
+
+
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": user.email}, expires_delta=access_token_expires
@@ -144,7 +149,8 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
         username=user.username,
         phone_number=user.phone_number,
         address=user.address,
-        is_active=user.is_active
+        is_active=user.is_active,
+        tenant_id=tenant_id
     )
     return {
         "access_token": access_token,

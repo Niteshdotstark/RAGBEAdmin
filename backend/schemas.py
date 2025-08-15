@@ -15,6 +15,7 @@ class UserCreate(UserBase):
 
 class UserResponse(UserBase):
     id: int
+    tenant_id: Optional[int] = None
     class Config:
         orm_mode = True
 
